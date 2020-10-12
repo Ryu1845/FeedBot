@@ -1,0 +1,10 @@
+[Unit]
+Description=Checks the reddit feeds and posts to the configured discord webhooks
+Wants=feedbot.timer
+
+[Service]
+Type=oneshot
+ExecStart=/opt/feedbot/check_feeds.sh
+
+[Install]
+WantedBy=multi-user.target

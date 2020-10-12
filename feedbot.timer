@@ -1,0 +1,10 @@
+[Unit]
+Description=Run the feedbot service every 10 minutes
+Requires=feedbot.service
+
+[Timer]
+Unit=feedbot.service
+OnCalendar=00/2:30
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,11 @@
+{
+  "feeds": {
+    "unique_name_for_feed": {
+      "url": "https://www.reddit.com/r/memes/new/.json",
+      "webhook": "https://discord.com/api/webhooks/<your>/<webhook_url>",
+      "nsfw": "hide",
+      "min_score": 1,
+      "min_age_secs": 600
+    }
+  }
+}
