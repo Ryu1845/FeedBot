@@ -4,7 +4,7 @@ Requires=feedbot.service
 
 [Timer]
 Unit=feedbot.service
-OnCalendar=00/2:30
+OnCalendar=*:0/10
 
 [Install]
 WantedBy=timers.target
