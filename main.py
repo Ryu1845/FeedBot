@@ -69,7 +69,12 @@ if __name__ == '__main__':
         print(f"Checking feed {feed}...")
         res = requests.get(feed_config['url'], headers={'User-Agent': "Linux:FeedBot:0.1 (by /u/Kanakonn)"})
         post_data = res.json()
-        posts = post_data['data']['children']
+        try:
+            posts = post_data['data']['children']
+        except KeyError:
+            if post_data['error']:
+                print(f"Error during processing of {feed}: {post_data['error']}, {post_data['reason']}. Message: {post_data['message']}")
+            continue
 
         # Find previous position
         if history[feed] is not None:
