@@ -3,11 +3,13 @@ import json
 import os
 import time
 from datetime import datetime
+import arrow
+from typing import Dict
 from urllib.parse import unquote
-
+import feedparser
 import requests
 
-DEFAULT_CONFIG = {
+DEFAULT_CONFIG: Dict[str, Dict[str, str]] = {
     "feeds": {}
 }
 CONFIG_FILE_NAME = "config.json"
@@ -45,15 +47,8 @@ def check_config(config):
             return False, f"Feed {feed} has invalid url."
         if feed_config['webhook'] == "" or feed_config['webhook'] is None:
             return False, f"Feed {feed} has invalid webhook url."
-        if feed_config['nsfw'] not in ["on", "off", "only"]:
-            return False, f"Feed {feed} has invalid nsfw value. Must be one of ['show', 'hide', 'only']."
-        if type(feed_config['min_score']) != int:
-            return False, f"Feed {feed} min_score is not a number."
-        if type(feed_config['min_age_secs']) != int:
-            return False, f"Feed {feed} min_age_secs is not a number."
-        if type(feed_config['min_age_secs']) < 0:
-            return False, f"Feed {feed} min_age_secs must be a positive number."
     return True, ""
+
 
 def urldecode(text):
     return html.unescape(unquote(text))
@@ -62,23 +57,20 @@ def urldecode(text):
 if __name__ == '__main__':
     config = load_config()
     res, reason = check_config(config)
-
     history = load_history(config)
 
+    time_fmt = 'DD MMM YYYY HH:mm:ss'
     for feed, feed_config in config['feeds'].items():
         print(f"Checking feed {feed}...")
-        res = requests.get(feed_config['url'], headers={'User-Agent': "Linux:FeedBot:0.1 (by /u/Kanakonn)"})
-        post_data = res.json()
-        try:
-            posts = post_data['data']['children']
-        except KeyError:
-            if post_data['error']:
-                print(f"Error during processing of {feed}: {post_data['error']}, {post_data['reason']}. Message: {post_data['message']}")
-            continue
-
+        post_data = feedparser.parse(feed_config['url'])
+        posts = post_data.entries
+        
         # Find previous position
         if history[feed] is not None:
-            post_ids = [post['data']['id'] for post in posts]
+            post_ids = list()
+            for post in posts:
+                published = arrow.get(post.published, time_fmt)
+                post_ids.append(published.timestamp)
             try:
                 previous_position = post_ids.index(history[feed])
             except ValueError:
@@ -89,7 +81,8 @@ if __name__ == '__main__':
         # Filter posts and reverse list so oldest posts get posted first.
         posts = list(reversed(posts[:previous_position]))
 
-        # If there are more than 10 entries, filter them out to 10 so we don't post too much in one go
+        # If there are more than 10 entries, 
+        # filter them out to 10 so we don't post too much in one go
         # The missed posts will be posted in the next iteration.
         if len(posts) > 10:
             posts = posts[:10]
@@ -97,59 +90,24 @@ if __name__ == '__main__':
         if len(posts) > 0:
             print(f"{len(posts)} new posts since post {history[feed]}.")
             for post in posts:
-                post = post['data']
-                print(f"Processing post {post['id']}")
-
-                # Check age of post before doing anything else (we want to process it again later)
-                if datetime.now().timestamp() - post['created_utc'] < feed_config['min_age_secs']:
-                    print(f"Skipping post due to minimum age not reached "
-                          f"(age {datetime.now().timestamp() - post['created_utc']}, "
-                          f"min age {feed_config['min_age_secs']})")
-                    continue
+                post = post
+                print(f"Processing post {post.title}")
 
                 # Add post to history so it won't be processed again
-                history[feed] = post['id']
-
-                # If post is not an image, skip it
-                if 'post_hint' in post and post['post_hint'] != "image":
-                    print(f"Skipping post due to no image: '{post['post_hint']}'")
-                    continue
-
-                # If post has no type hint (probably not an image), skip it
-                if 'post_hint' not in post:
-                    print(f"Skipping post due to no valid post_hint.")
-                    continue
-
-                # If post has too low score, skip it
-                if post['score'] < feed_config['min_score']:
-                    print(f"Skipping post due to low score: {post['score']} < {feed_config['min_score']}")
-                    continue
-
-                # If post is NSFW but we want no nsfw, skip it
-                if feed_config['nsfw'] == "hide" and post['over_18']:
-                    print("Skipping post due to NSFW")
-                    continue
-
-                # If post is not NSFW but we want only nsfw, skip it
-                if feed_config['nsfw'] == "only" and not post['over_18']:
-                    print("Skipping post due to not NSFW")
-                    continue
+                history[feed] = arrow.get(post.published, time_fmt).timestamp
 
                 res = requests.post(url=feed_config['webhook'], json={
-                    'username': f"/{post['subreddit_name_prefixed']}",
+                    'username': f"/{post_data.feed.title}",
                     'embeds': [
                         {
-                            'title': f"{urldecode(post['title'])} - {post['score']} points",
-                            'url': f"https://old.reddit.com{post['permalink']}",
-                            'image': {
-                                'url': f"{post['url']}"
-                            },
+                            'title': post.title,
+                            'url': post.link,
                             'author': {
-                                'name': f"{post['subreddit_name_prefixed']}",
-                                'url': f"https://old.reddit.com/{post['subreddit_name_prefixed']}"
+                                'name': post_data.feed.title,
+                                'url': post_data.feed.link
                             },
                             'footer': {
-                                'text': f"/u/{post['author']}"
+                                'text': post_data.feed.subtitle
                             }
                         }
                     ]

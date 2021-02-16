@@ -1,4 +1,5 @@
 .idea/
 venv/
+__pypackages__/
 history.json
 config.json
