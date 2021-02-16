@@ -1,8 +1,20 @@
 [project]
+name = ""
+version = ""
+description = ""
+authors = [
+    {name = "Ryu1845", email = "ryu@tpgjbo.xyz"},
+]
 dependencies = [
     "requests",
-    "feedparser~=6.0",
 ]
+dev-dependencies = []
+requires-python = ">=3.9"
+dynamic = ["classifiers"]
+license = {text = "MIT"}
+
+[project.urls]
+homepage = ""
 
 [tool]
 [tool.pdm]
@@ -10,7 +22,7 @@ dependencies = [
 name = "pypi"
 url = "https://pypi.org/simple"
 verify_ssl = true
-
 [build-system]
 requires = ["pdm-pep517"]
 build-backend = "pdm.pep517.api"
+
