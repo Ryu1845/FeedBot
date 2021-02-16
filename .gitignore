@@ -1,4 +1,7 @@
 .idea/
+.mypy_cache/
+.pdm.toml
+pdm.lock
 venv/
 __pypackages__/
 history.json
