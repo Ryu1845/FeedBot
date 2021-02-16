@@ -1,11 +1,8 @@
-import html
 import json
 import os
 import time
-from datetime import datetime
 import arrow
 from typing import Dict
-from urllib.parse import unquote
 import feedparser
 import requests
 
@@ -50,10 +47,6 @@ def check_config(config):
     return True, ""
 
 
-def urldecode(text):
-    return html.unescape(unquote(text))
-
-
 if __name__ == '__main__':
     config = load_config()
     res, reason = check_config(config)
@@ -64,7 +57,7 @@ if __name__ == '__main__':
         print(f"Checking feed {feed}...")
         post_data = feedparser.parse(feed_config['url'])
         posts = post_data.entries
-        
+
         # Find previous position
         if history[feed] is not None:
             post_ids = list()
@@ -81,7 +74,7 @@ if __name__ == '__main__':
         # Filter posts and reverse list so oldest posts get posted first.
         posts = list(reversed(posts[:previous_position]))
 
-        # If there are more than 10 entries, 
+        # If there are more than 10 entries,
         # filter them out to 10 so we don't post too much in one go
         # The missed posts will be posted in the next iteration.
         if len(posts) > 10:
